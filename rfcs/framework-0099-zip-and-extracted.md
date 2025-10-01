@@ -1,66 +1,66 @@
 # Support for ZIP and other container formats
 
 - Start Date: 2025-10-01
+- RFC PR: `[TBD]`
 - Authors: Mirek Simek
-- RFC PR: TODO [#95](https://github.com/inveniosoftware/rfcs/pull/95)
 - State: DRAFT
 
 ## Summary
 
-This RFC proposes to add support for ZIP files and other container file formats. It includes the ability to show the contents of these files via the API and UI as well as to extract the files contained within them.
+This RFC proposes adding support for ZIP files and other container file formats. It includes the ability to list archive contents via API and UI, to preview files inside a ZIP archive, and to extract individual files or directories.
 
 ## Motivation
 
-ZIP files and other container formats (e.g., tar, rar) are commonly used to bundle multiple files together for easier distribution and storage. However, currently there is no support for extracting and previewing the contents of these files in the Invenio framework. Adding this functionality would enhance the user experience by allowing users to view and access the contents of ZIP files directly within the Invenio platform.
+ZIP archives and other container formats (e.g., NetCDF) are commonly used to bundle multiple files for distribution and storage. Currently, Invenio does not support listing or extracting the contents of these files. Adding this functionality will enhance the user experience by allowing users to browse and access archive contents directly within the Invenio platform.
 
 This is a feature that is commonly requested by our users.
 
 ### User stories
 
-#### Border Stones Dataset
+#### Border stones dataset
 
-A user submitted a dataset of 1000s images of border stones in a single ZIP file. The file has a hierarchy of folders that are named after the regions where the stones were found. The user would like to be able to preview the images in the UI and also download individual images or folders of images.
+A user submitted a dataset with thousands of images of border stones packaged as a single ZIP file. The archive contains a hierarchy of folders named after the regions where the stones were found. The user wants to preview images in the UI and download individual images or folders.
 
-#### Multidimensional Data
+#### Multidimensional data
 
-A user submitted a multidimensional dataset packed as NetCDF file. The user would like to list the parts of the file and preview some of them as plots/maps.
+A user submitted a multidimensional dataset packaged as a NetCDF file. The user wants to browse its logical parts and preview some of them as plots/maps.
 
 ## User interface
 
-### Preferable approach
+### Preferred approach
 
-Ideally, we would like to show the contents of the ZIP (and other container) file in a hierarchical tree structure. The user should be able to expand/collapse folders to see the files contained within them. Each file should have a link to download it directly.
+Ideally, the UI should show the contents of the ZIP (and other container) file in a hierarchical tree. Users can expand/collapse folders to see contained files. Each file should provide a direct download link.
 
 Example of user interface showing the contents of a ZIP file:
 
-![](./0099/zip_list_preview.png)
+![Screenshot of ZIP contents tree preview](./0099/zip_list_preview.png)
 
-### Less-ideal approach
+### Interim approach
 
-We will change the ZIP invenio-previewer to support add links to download the files inside the ZIP file.  This will be a quick way to provide some functionality without needing to implement the full UI. The links will point to the new API endpoints for extracting files from the ZIP file. Preview functionality for files inside the ZIP file will not be possible in this approach.
+As a quicker interim step, we will extend the ZIP previewer to add links for downloading files inside the ZIP. The links will point to new API endpoints for extracting files from the archive. Previewing files inside the ZIP will not be supported in this approach.
 
 ## Detailed design
 
 ### REST API
 
-The API will be extended to support the following operations:
+The API will be extended to support the following operations (HTTP method: GET unless otherwise noted):
 
-- **List contents**: An endpoint to list the contents of a ZIP file or other container formats. This will return a hierarchical structure of files and directories contained within the archive.
+- List contents: List the contents of an archive (ZIP or other supported formats). Returns a hierarchical structure of files and directories.
 
-- **Extract files**: An endpoint to extract specific files or directories from the archive. This will allow users to download individual files or groups of files without needing to download the entire archive.
+- Extract files: Retrieve specific files or directories from the archive. Enables downloading individual files or groups of files without downloading the entire archive.
 
 | Endpoint | Description |
 | --- | --- |
-| `<record>/files/<key>/content/entries` | List contents of the archive |
-| `<record>/files/<key>/content/entries/<path>` | Extract specific files or directories |
+| `<record>/files/<key>/content/entries` | List archive contents |
+| `<record>/files/<key>/content/entries/<path>` | Retrieve a file, or a directory as a ZIP stream |
 
 ### File metadata
 
-Existing file metadata will be extended with attribute `container` to indicate if the file is a container format that can be extracted. This attribute will be set to `true` for supported formats (e.g., ZIP, NetCDF, ...) and `false` otherwise.
+Existing file metadata will be extended with a boolean attribute `container` to indicate if the file is a container format that can be extracted. This attribute is `true` for supported formats (e.g., ZIP, NetCDF) and `false` otherwise.
 
-#### LIST operation
+#### List operation
 
-The list operation is a GET request to the endpoint `/api/records/<pid_value>/files/<key>/content/entries`.  User must have `can_get_content_files` permission to be able to call the API. The API returns a JSON response with the following structure:
+The list operation is a GET request to `/api/records/<pid_value>/files/<key>/content/entries`. The user must have the `can_get_content_files` permission to call the API. The API returns a JSON response with the following structure:
 
 ```json5
 {
@@ -77,7 +77,7 @@ The list operation is a GET request to the endpoint `/api/records/<pid_value>/fi
                     "title": "My text file", // optional
                     "type": "file",
                     "size": 1234, // optional
-                    "checksum": "md5:abcd1234" // optional
+                    "checksum": "md5:abcd1234", // optional
                     "mime_type": "text/plain", // optional
                     // other metadata fields can be added here and should be ignored by clients
                     // if not recognized
@@ -87,21 +87,20 @@ The list operation is a GET request to the endpoint `/api/records/<pid_value>/fi
         },
         // ...
     ],
-    "total": 42 // total number of entries (files and directories)
+    "total": 42, // total number of entries (files and directories)
     "truncated": false // true if the listing was truncated (e.g., too many entries)
 }
 ```
 
-Note: we do not plan to support pagination for the listing operation as pagination over hierarchical structure is difficult to implement. The entire structure will be returned in a single response. The extractor
-should return the total number of entries and a flag indicating if the listing was truncated.
+Note: we do not plan to support pagination for the listing operation, as pagination over a hierarchical structure is difficult to implement. The entire structure will be returned in a single response. The extractor should return the total number of entries and a flag indicating whether the listing was truncated.
 
 #### Extract operation
 
-The extract operation is a GET request to the endpoint `/api/records/<pid_value>/files/<key>/content/entries/<path>`. User must have `can_get_content_files` permission to be able to call the API. It returns the content of the specified file or a container file containing the specified directory and its contents.
+The extract operation is a GET request to `/api/records/<pid_value>/files/<key>/content/entries/<path>`. The user must have the `can_get_content_files` permission. If `<path>` points to a file, the API streams the file content. If `<path>` points to a directory, the API streams a ZIP archive of that directory.
 
 ### Internal API
 
-Most of the backend logic is implemented inside the `invenio_records_resources` package.
+Most of the backend logic will be implemented inside the `invenio_records_resources` package.
 
 #### `invenio_records_resources.services.files.extractors`
 
@@ -111,6 +110,7 @@ A new module `invenio_records_resources.services.files.extractors` will be creat
 
 ```python
 
+from typing import Protocol
 from invenio_records_resources.files.api import FileRecord
 
 class SendFileProtocol(Protocol):
@@ -132,23 +132,22 @@ class FileExtractor:
 
 This module will implement the `FileExtractor` interface for ZIP files using the `zipfile` module from the Python standard library.
 
-There are two sources of the ZIP file and each one needs to have a different processing strategy:
+There are two storage scenarios for the ZIP file, and each requires a different processing strategy:
 
-1. Locally stored files - these are files that are stored on the local filesystem where we can easily have a random access to any part of the file.
+1. Locally stored files — files stored on the local filesystem, where random access to any part of the file is cheap.
 
-2. Remotely stored files - these are files that are stored on remote storage backends (e.g., S3, Google Cloud Storage) where we do not have a cheap random access to the file. Seeks are expensive as they require a new connection to the remote storage.
+2. Remotely stored files — files stored on remote storage backends (e.g., S3, Google Cloud Storage) where random access is expensive because seeks require new connections.
 
-To address both cases, we will add a pre-procesing step. After file is uploaded, a dedicated file processor will be called. This file processor will check the ZIP file and create an index of the contents. This index will be stored as a separate JSON file inside the media_files bucket. The index will contain all the information needed for the `list` operation, so that we do not need to open the ZIP file for listing.
+To address both cases, we will add a pre-processing step. After a file is uploaded, a dedicated file processor will check the ZIP file and create an index of the contents. This index will be stored as a separate JSON file inside the associated media files bucket. The index will contain all the information needed for the `list` operation, so the ZIP does not need to be opened for listing.
 
-For remote storage backends, the index will also contain a clone of the file table of contents (TOC) of the ZIP file. When a file from the ZIP will be requested, we will use the TOC to feed the `zipfile` module with the information about where the file is located inside the ZIP file. This will allow us to extract the file in a single operation without any seeks.
+For remote storage backends, the index will also contain a copy of the ZIP file's table of contents (TOC). When a file from the ZIP is requested, we will use the TOC to instruct the `zipfile` module where the file is located inside the archive. This allows extracting the file in a single operation without additional seeks.
 
 ## Previewers
 
-Currently previewers use a low-level API to access the file content. To be able to preview files inside ZIP files in a backward compatible way, we would need to add a "compatibility" layer that would give this access.
+Currently, previewers use a low-level API to access file content. To enable previewing files inside ZIP archives in a backward-compatible way, we will add a compatibility layer that exposes archive entries as regular file-like resources.
 
-## Questions
+## Unresolved questions
 
-- As support for extractors might require both FileExtractor and FileProcessor, would it make sense to have a contrib module that
-would provide both? Similarly to what is in `invenio_vocabularies.contrib` for specific vocabularies.
+- As support for extractors might require both a `FileExtractor` and a `FileProcessor`, would it make sense to have a contrib module that provides both (similar to `invenio_vocabularies.contrib`)?
   - `invenio_records_resources.contrib.extractors.zip`
   - `invenio_records_resources.contrib.extractors.netcdf`
