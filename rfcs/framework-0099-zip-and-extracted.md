@@ -27,13 +27,17 @@ A user submitted a multidimensional dataset packed as NetCDF file. The user woul
 
 ## User interface
 
+### Preferable approach
+
+Ideally, we would like to show the contents of the ZIP (and other container) file in a hierarchical tree structure. The user should be able to expand/collapse folders to see the files contained within them. Each file should have a link to download it directly.
+
 Example of user interface showing the contents of a ZIP file:
 
 ![](./0099/zip_list_preview.png)
 
-### File listing
+### Less-ideal approach
 
-Ideally, we would like to show the contents of the ZIP file in a hierarchical tree structure. The user should be able to expand/collapse folders to see the files contained within them. Each file should have a link to download it directly.
+We will change the ZIP invenio-previewer to support add links to download the files inside the ZIP file.  This will be a quick way to provide some functionality without needing to implement the full UI. The links will point to the new API endpoints for extracting files from the ZIP file. Preview functionality for files inside the ZIP file will not be possible in this approach.
 
 ## Detailed design
 
@@ -49,6 +53,10 @@ The API will be extended to support the following operations:
 | --- | --- |
 | `<record>/files/<key>/content/entries` | List contents of the archive |
 | `<record>/files/<key>/content/entries/<path>` | Extract specific files or directories |
+
+### File metadata
+
+Existing file metadata will be extended with attribute `container` to indicate if the file is a container format that can be extracted. This attribute will be set to `true` for supported formats (e.g., ZIP, NetCDF, ...) and `false` otherwise.
 
 #### LIST operation
 
