@@ -27,11 +27,13 @@ A user submitted a multidimensional dataset packed as NetCDF file. The user woul
 
 ## User interface
 
+Example of user interface showing the contents of a ZIP file:
+
+![](./0099/zip_list_preview.png)
+
 ### File listing
 
 Ideally, we would like to show the contents of the ZIP file in a hierarchical tree structure. The user should be able to expand/collapse folders to see the files contained within them. Each file should have a link to download it directly.
-
-
 
 ## Detailed design
 
@@ -43,7 +45,7 @@ The API will be extended to support the following operations:
 
 - **Extract files**: An endpoint to extract specific files or directories from the archive. This will allow users to download individual files or groups of files without needing to download the entire archive.
 
-| Endpoint                                              | Description                    |
+| Endpoint | Description |
 | --- | --- |
 | `<record>/files/<key>/content/entries` | List contents of the archive |
 | `<record>/files/<key>/content/entries/<path>` | Extract specific files or directories |
@@ -91,11 +93,11 @@ The extract operation is a GET request to the endpoint `/api/records/<pid_value>
 
 ### Internal API
 
-Most of the backend logic is implemented inside the `invenio_records_resources` package. 
+Most of the backend logic is implemented inside the `invenio_records_resources` package.
 
 #### `invenio_records_resources.services.files.extractors`
 
-A new module `invenio_records_resources.services.files.extractors` will be created to handle the extraction. 
+A new module `invenio_records_resources.services.files.extractors` will be created to handle the extraction.
 
 #### `invenio_records_resources.services.files.extractors.base`
 
@@ -132,9 +134,13 @@ To address both cases, we will add a pre-procesing step. After file is uploaded,
 
 For remote storage backends, the index will also contain a clone of the file table of contents (TOC) of the ZIP file. When a file from the ZIP will be requested, we will use the TOC to feed the `zipfile` module with the information about where the file is located inside the ZIP file. This will allow us to extract the file in a single operation without any seeks.
 
+## Previewers
+
+Currently previewers use a low-level API to access the file content. To be able to preview files inside ZIP files in a backward compatible way, we would need to add a "compatibility" layer that would give this access.
+
 ## Questions
 
 - As support for extractors might require both FileExtractor and FileProcessor, would it make sense to have a contrib module that
-would provide both? Similarly to what is in `invenio_vocabularies.contrib` for specific vocabularies. 
+would provide both? Similarly to what is in `invenio_vocabularies.contrib` for specific vocabularies.
   - `invenio_records_resources.contrib.extractors.zip`
   - `invenio_records_resources.contrib.extractors.netcdf`
