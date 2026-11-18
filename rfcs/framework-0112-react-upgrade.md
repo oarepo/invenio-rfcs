@@ -1,7 +1,6 @@
 - Start Date: 2026-03-30
 - RFC PR: [#112](https://github.com/inveniosoftware/rfcs/pull/112)
 - Authors: Miroslav Bauer <bauer@cesnet.cz>
-- State: DRAFT
 
 # React v16 to v18 Migration
 
