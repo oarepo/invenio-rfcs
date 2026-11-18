@@ -19,7 +19,7 @@ React 16 reached EOL in March 2020, creating compounding problems:
 - **Performance limitations**: Cannot leverage automatic batching, concurrent features, UX improvements.
 
 **User stories:**
-1. As a new frontend contributor, I want to use modern React patterns so I can submit PRs without learning lagacy React 16-specific patterns.
+1. As a new frontend contributor, I want to use modern React patterns so I can submit PRs without learning legacy React 16-specific patterns.
 2. As a core team developer, I want code reviews focused on logic rather than deprecated lifecycle methods.
 3. As a module maintainer, I want to upgrade peer dependencies without forking libraries.
 4. As an InvenioRDM developer using TypeScript, I want proper type exports for IDE support.
@@ -34,7 +34,7 @@ The migration is split into phases aligned to the InvenioRDM release train. Ever
 
 #### Prerequisites
 
-- Node.js 18.0.0+ (LTS, React 18 compatible)
+- Node.js 22.0.0+ (CI test matrix: Node 22.x, 24.x, 26.x)
 - Jest 27.0.0+ (React 18 compatible test runner)
 
 #### Breaking Changes Summary
@@ -60,18 +60,23 @@ The migration is split into phases aligned to the InvenioRDM release train. Ever
    - Exposes side effects in constructors and effects
    - Requires proper cleanup functions
 
+5. **`defaultProps` on function components** (deprecated since React 18.3)
+   - Produces deprecation warnings for every affected component
+   - Replace with ES6 default parameters in function and render-only class components
+   - `defaultProps` on regular class components are kept (still supported)
+
 **Dependency Breaking Changes:**
 
 | Package | Change | Impact |
 |---------|--------|--------|
-| `@tinymce/tinymce-react` | v4 → v6 | Editor API changes, event handlers |
-| `tinymce` | v6.7.2 → v7.0.0 | Core library updates |
+| `@tinymce/tinymce-react` | Remove, use `@hugerte/hugerte-react` | Editor component & import path change |
+| `tinymce` | Remove, use `hugerte` | Core editor library replaced |
 | `react-json-view` | Remove, use `@microlink/react-json-view` | Import path change |
-| `@ckeditor/ckeditor5-react` | ^2.1.0 | Complete removal | Any CkEditor usage breaks | invenio-vocabularies, invenio-communities |
-| `@ckeditor/ckeditor5-build-classic` | ^16.0.0 | Complete removal | Any CkEditor usage breaks | invenio-vocabularies |
+| `@ckeditor/ckeditor5-react` | Complete removal | Any CkEditor usage breaks |
+| `@ckeditor/ckeditor5-build-classic` | Complete removal | Any CkEditor usage breaks |
 
-**Package Version Bumps (Major):**
-- `react-overridable`: v1.x → v2.0.0
+**Package Version Bumps:**
+- `react-overridable`: v1.x → v1.1.0 (non-breaking, see Phase 1)
 - `react-invenio-forms`: v4.x → v5.0.0
 - `react-searchkit`: v3.x → v4.0.0
 - All Python packages with React entry points: major version bump
@@ -114,7 +119,7 @@ Following [InvenioRDM Release Management](https://inveniordm.docs.cern.ch/mainte
 
 Release `v(X+1).0.0.dev0` in order:
 
-1. `react-overridable` v2.0.0.dev0 (no dependencies)
+1. `react-overridable` v1.1.0 (non-breaking minor release, no dependencies)
 2. `react-invenio-forms` v5.0.0.dev0 (depends on #1)
 3. `react-searchkit` v4.0.0.dev0 (depends on #1)
 4. `invenio-theme`
@@ -125,8 +130,9 @@ Release `v(X+1).0.0.dev0` in order:
 9. `invenio-communities` (depends on #5, #6, #7, #8)
 10. `invenio-rdm-records` (depends on #2, #3, #6)
 11. `invenio-jobs` (depends on #2, #3)
-12. `invenio-app-rdm` (top-level, depends on all above)
-13. `cookiecutter-invenio-rdm` (template, depends on #12)
+12. `invenio-collections` (depends on #2)
+13. `invenio-app-rdm` (top-level, depends on all above)
+14. `cookiecutter-invenio-rdm` (template, depends on #13)
 
 **Release Process:**
 1. **Development:** `v(X+1).0.0.dev0` during development
@@ -189,6 +195,8 @@ await act(() => {
 
 **Critical Dependency:** Prepare RSPack build config before any migration work.
 
+**Status:** Not yet implemented - the proposed `invenio-assets` change ([invenio-assets#189](https://github.com/inveniosoftware/invenio-assets/pull/189), React 18 & TypeScript support) was closed unmerged. React 18 migration proceeded without it.
+
 Requirements:
 - `@babel/preset-react` with `runtime: 'automatic'` (no need to explicitly import React anymore)
 - JSX transform compatible with React 18
@@ -203,12 +211,14 @@ Several dependencies require update/replacement for React 18 compatibility.
 |---------|---------|--------|------------------|-------------------|
 | `react-json-view` | ^1.21.3 | **REMOVE** | Deprecated | invenio-app-rdm |
 | `@microlink/react-json-view` | - | ^1.31.15 | Drop-in replacement | invenio-app-rdm, invenio-jobs |
-| `@tinymce/tinymce-react` | ^4.3.0 | ^6.0.0 | Editor API changes | 5 packages* |
-| `tinymce` | ^6.7.2 | ^7.0.0 | Core library | Same 5 packages |
+| `@tinymce/tinymce-react` | ^4.3.0 | **REMOVE** | Replaced by HugeRTE | 6 packages* |
+| `tinymce` | ^6.7.2 | **REMOVE** | Replaced by HugeRTE | Same 6 packages |
+| `@hugerte/hugerte-react` | - | ^2.0.2 | New editor React wrapper | Same 6 packages |
+| `hugerte` | - | ^1.0.10 | Community fork of TinyMCE 6 (MIT) | Same 6 packages |
 | `@ckeditor/ckeditor5-react` | ^2.1.0 | **REMOVE** | Complete removal | invenio-vocabularies, invenio-communities |
 | `@ckeditor/ckeditor5-build-classic` | ^16.0.0 | **REMOVE** | Complete removal | invenio-vocabularies |
 
-*invenio-app-rdm, invenio-rdm-records, invenio-communities, invenio-requests, invenio-administration
+*react-invenio-forms, invenio-app-rdm, invenio-rdm-records, invenio-communities, invenio-requests, invenio-administration
 
 **react-json-view Migration:**
 ```python
@@ -219,12 +229,25 @@ Several dependencies require update/replacement for React 18 compatibility.
 "@microlink/react-json-view": "^1.31.15"
 ```
 
-**@tinymce/tinymce-react v4 → v6 Breaking Changes:**
-1. Editor component initialization API changes
-2. Event handler signature changes (onEditorChange)
-3. Deprecated props removed
+**TinyMCE → HugeRTE Migration:**
 
-**Coordination Required:** All 5 packages must update simultaneously to avoid version conflicts.
+Instead of upgrading TinyMCE (v7+ is no longer MIT licensed), the rich text editor is replaced with [HugeRTE](https://github.com/hugerte/hugerte), an MIT-licensed community fork of TinyMCE 6:
+
+```python
+# Before (webpack.py)
+"@tinymce/tinymce-react": "^4.3.0",
+"tinymce": "^6.7.2",
+
+# After
+"@hugerte/hugerte-react": "^2.0.2",
+"hugerte": "^1.0.10",
+```
+
+HugeRTE keeps the TinyMCE 6 editor API, so existing editor configuration carries over with minimal changes.
+
+**Coordination Required:** All 6 packages must update simultaneously to avoid version conflicts.
+
+**Follow-up:** HugeRTE ships no language packs of its own; localizing the editor UI is tracked in [react-invenio-forms#337](https://github.com/inveniosoftware/react-invenio-forms/pull/337).
 
 #### Codemods & Migration Tooling
 
@@ -244,7 +267,7 @@ Official mods: https://github.com/reactjs/react-codemod/tree/master/transforms
 
 #### ESLint Configuration
 
-Create a separate React 18 config to enable gradual migration:
+Create a separate React 18 config to enable gradual migration (implemented in [eslint-config-invenio#20](https://github.com/inveniosoftware/eslint-config-invenio/pull/20)):
 
 **File: `configs/react18.yaml`**
 ```yaml
@@ -262,21 +285,18 @@ rules:
   react-hooks/exhaustive-deps: warn
 ```
 
-**Package.json exports:**
-```json
-{
-  "exports": {
-    ".": "./configs/main.yaml",
-    "./react18": "./configs/react18.yaml"
-  }
-}
+**Usage (`.eslintrc.yml` of a migrated package):**
+```yaml
+extends:
+  - "@inveniosoftware/eslint-config-invenio/configs/react18.yaml"
+  - "@inveniosoftware/eslint-config-invenio/configs/prettier.yaml"
 ```
 
 **Migration path:**
 | Phase | Config | Use Case |
 |-------|--------|----------|
 | Legacy | `@inveniosoftware/eslint-config-invenio` | React 16 support (existing projects) |
-| Migration | `@inveniosoftware/eslint-config-invenio/react18` | React 18 migration (opt-in per package) |
+| Migration | `@inveniosoftware/eslint-config-invenio/configs/react18.yaml` | React 18 migration (opt-in per package) |
 
 This allows packages to migrate individually without breaking existing React 16 consumers.
 
@@ -285,7 +305,7 @@ This allows packages to migrate individually without breaking existing React 16 
 At the root of each package, provide:
 
 - `run-js-tests.sh` to run any Jest tests provided in package
-- `run-js-lint.sh` to lint any JS code against `eslint-config-invenio` rules
+- `run-js-linter.sh` to lint any JS code against `eslint-config-invenio` rules
 
 **Implementation:** PR https://github.com/inveniosoftware/workflows/pull/26 adds CI support for `run-js-tests.sh` - the workflow attempts to execute the script and falls back to `npm test` if not present, maintaining backward compatibility.
 
@@ -416,7 +436,7 @@ These are dependencies of most other front-end packages:
 | Package | Changes |
 |---------|---------|
 | `react-overridable` | React 18.3 (dev), classic JSX transform, backward compatible with 16/17 |
-| `react-invenio-forms` | React 18.3, Formik ^2.1.0, Enzyme adapter |
+| `react-invenio-forms` | React 18.3, Formik ^2.4.9, HugeRTE editor, Enzyme adapter |
 | `react-searchkit` | React 18.3, Enzyme adapter, JavaScript |
 
 **Note on react-overridable implementation:** PR https://github.com/indico/react-overridable/pull/36 uses a **non-breaking approach** - peer deps remain `>=16.14.0`, classic JSX transform maintains React 16-18 compatibility.
@@ -438,7 +458,7 @@ These are dependencies of most other front-end packages:
 
 Migrate all Python packages declaring React entry points in `webpack.py`:
 
-`invenio-app-rdm`, `invenio-rdm-records`, `invenio-communities`, `invenio-requests`, `invenio-search-ui`, `invenio-administration`, `invenio-theme`
+`invenio-app-rdm`, `invenio-rdm-records`, `invenio-communities`, `invenio-requests`, `invenio-search-ui`, `invenio-administration`, `invenio-vocabularies`, `invenio-jobs`, `invenio-collections`, `invenio-theme`
 
 **Migration order:** Leaf packages first, `invenio-app-rdm` last
 
@@ -446,7 +466,7 @@ Migrate all Python packages declaring React entry points in `webpack.py`:
 1. Install Enzyme adapter in package dependencies
 2. Update `webpack.py` React dependencies
 3. Apply codemods to entry points (e.g. ReactDOM.render → createRoot)
-4. Fix StrictMode issues, manual fixes
+4. Fix StrictMode issues, replace `defaultProps` on function components, manual fixes
 5. Validate locally (Jest tests, lint)
 6. Run integration tests (oarepo/invenio-testrig)
 7. Update documentation
@@ -533,17 +553,6 @@ Consider upgrading from ^7.2.0 to v8+ for better concurrent rendering support.
 
 Gradual migration of packages to TypeScript, starting with public API types.
 
-#### 9. Formik Upgrade (Optional)
-
-Upgrade Formik from ^2.1.0 to ^2.4.0+ for latest bug fixes and improvements.
-
-**Benefits:**
-- Latest bug fixes
-- Better React 18 compatibility
-- Performance improvements
-
-**Note:** This can be done independently of React 18 migration.
-
 ### Phase 4 - Documentation
 
 Create a migration guide for the InvenioRDM community, based on applied patterns & final package versions, taking them from current React v16.13 front-end to fully v18.
@@ -627,7 +636,7 @@ Enzyme.configure({ adapter: new Adapter() });
 3. **IE11 Deprecation**: React 18 drops IE11 support.
 4. **StrictMode**: Development-only double-invocation exposes side effects.
 5. **Automatic Batching**: Code relying on sync state reads may need `flushSync()`.
-6. **Semantic UI React**: Must verify Modal/Portal components work with React 18 event delegation.
+6. **Semantic UI React**: Modal/Portal components verified to work with React 18 event delegation (manual testing and Playwright e2e suite, incl. Uppy file uploads).
 7. **CkEditor Removal**: Complete removal affects any instances using CkEditor.
 
 ## Alternatives
@@ -664,11 +673,14 @@ Enzyme.configure({ adapter: new Adapter() });
 
 ## Unresolved questions
 
-1. **CI/CD Integration**: How to integrate migration testing into existing pipelines?
-2. **Class Components Strategy**: Keep, or partially rewrite to functional?
-3. **@tinymce/tinymce-react Version**: v5 (safer) or v6 (better React 18 support)?
-4. **IE11 Impact Assessment**: Determine impact on InvenioRDM user base.
-5. **Semantic UI React Verification**: Test Modal/Portal with React 18 event delegation.
+1. **Class Components Strategy**: Keep, or partially rewrite to functional? (Render-only classes were converted by the `pure-component` codemod; remaining classes kept.)
+2. **IE11 Impact Assessment**: Determine impact on InvenioRDM user base.
+
+### Resolved
+
+- **CI/CD Integration**: Shared `inveniosoftware/workflows` run `run-js-tests.sh` (falling back to `npm test`), see [workflows#26](https://github.com/inveniosoftware/workflows/pull/26).
+- **Rich text editor**: TinyMCE replaced by HugeRTE instead of upgrading `@tinymce/tinymce-react`.
+- **Semantic UI React Verification**: Modal/Portal and Uppy uploads verified on React 18 (manual testing, Playwright e2e suite, vanilla `invenio-cli init rdm -c master` instance).
 
 ## Resources/Timeline
 
